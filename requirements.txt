@@ -1,0 +1,14 @@
+pyautogui>=0.9.54
+pygetwindow>=0.0.9
+pywin32>=308
+pillow>=10.0.0
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+edge-tts>=6.1.0
+PySide6>=6.5.0
+python-dotenv>=1.0.0
+openai>=1.0.0
+google-genai>=0.1.0
+psutil>=5.9.0
+requests>=2.30.0
+pydantic>=2.0.0
