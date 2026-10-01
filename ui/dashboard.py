@@ -93,30 +93,40 @@ if HAS_PYSIDE:
         status_changed = Signal(str)
         log_signal = Signal(str)
 
-        def __init__(self, stt, wake_detector, is_wake_word_mode=True):
+        def __init__(self, stt, wake_detector, get_wake_mode_fn):
             super().__init__()
             self.stt = stt
             self.wake_detector = wake_detector
-            self.is_wake_word_mode = is_wake_word_mode
+            self.get_wake_mode_fn = get_wake_mode_fn
             self.running = True
 
         def run(self):
+            if not self.stt or not self.stt.microphone:
+                self.log_signal.emit("⚠️ Warning: Microphone not initialized. Check PyAudio/Microphone settings.")
+                self.status_changed.emit("NO MIC")
+                return
+
             self.status_changed.emit("LISTENING")
             while self.running:
                 try:
                     spoken = self.stt.listen_command()
                     if spoken:
-                        self.log_signal.emit(f"Voice detected: '{spoken}'")
+                        self.log_signal.emit(f"🎙️ Voice detected: '{spoken}'")
+                        is_wake_mode = self.get_wake_mode_fn()
                         is_wake, clean_cmd = self.wake_detector.process_input(
                             spoken, 
-                            require_wake_word=self.is_wake_word_mode
+                            require_wake_word=is_wake_mode
                         )
                         if is_wake and clean_cmd:
                             self.status_changed.emit("PROCESSING")
                             self.command_detected.emit(clean_cmd)
                             time.sleep(1.0)
                         elif is_wake and not clean_cmd:
-                            self.log_signal.emit("Wake word heard. Awaiting command...")
+                            self.log_signal.emit("📢 Wake word heard! Awaiting command...")
+                        else:
+                            self.log_signal.emit(
+                                f"💡 Tip: Wake-Word Mode is ON. Say '{config.WAKE_WORD} {spoken}' or uncheck 'Wake-Word Mode' for direct voice execution."
+                            )
                 except Exception as e:
                     logger.error(f"Error in VoiceListenerThread: {e}")
                 time.sleep(0.1)
@@ -270,7 +280,7 @@ if HAS_PYSIDE:
                 self.listener_thread = VoiceListenerThread(
                     self.stt, 
                     self.wake_detector, 
-                    is_wake_word_mode=self.wake_chk.isChecked()
+                    get_wake_mode_fn=lambda: self.wake_chk.isChecked()
                 )
                 self.listener_thread.command_detected.connect(self.process_command)
                 self.listener_thread.status_changed.connect(self.update_status)
@@ -303,7 +313,10 @@ if HAS_PYSIDE:
             def run_bg():
                 res = self.agent.execute_command(cmd_text)
                 self.resp_lbl.setText(f"Assistant Response: {res.get('message', 'Done')}")
-                self.status_lbl.setText("● IDLE")
+                if self.listener_thread and self.listener_thread.isRunning():
+                    self.status_lbl.setText("● LISTENING")
+                else:
+                    self.status_lbl.setText("● IDLE")
 
             threading.Thread(target=run_bg, daemon=True).start()
 
