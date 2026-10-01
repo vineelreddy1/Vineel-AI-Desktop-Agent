@@ -19,11 +19,16 @@ class SpeechToText:
         if HAS_SR and self.provider != "mock":
             try:
                 self.recognizer = sr.Recognizer()
+                self.recognizer.dynamic_energy_threshold = True
+                self.recognizer.pause_threshold = 0.8
+                
                 # Check microphone availability
                 mics = sr.Microphone.list_microphone_names()
                 if mics:
                     self.microphone = sr.Microphone()
                     logger.info(f"Initialized microphone: {mics[0]}")
+                    with self.microphone as source:
+                        self.recognizer.adjust_for_ambient_noise(source, duration=0.8)
                 else:
                     logger.warning("No microphone found on system.")
             except Exception as e:
@@ -44,7 +49,6 @@ class SpeechToText:
         try:
             with self.microphone as source:
                 logger.info("Listening for voice input...")
-                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
                 audio = self.recognizer.listen(
                     source,
                     timeout=timeout,

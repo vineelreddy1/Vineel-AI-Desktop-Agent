@@ -3,6 +3,7 @@ pygetwindow>=0.0.9
 pywin32>=308
 pillow>=10.0.0
 SpeechRecognition>=3.10.0
+pyaudio>=0.2.14
 pyttsx3>=2.90
 edge-tts>=6.1.0
 PySide6>=6.5.0
